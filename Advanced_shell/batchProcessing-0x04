@@ -1,28 +1,80 @@
+# #!/usr/bin/env bash
+# # batchProcessing-0x04
+# # Fetch Pokémon data in parallel and handle background jobs
+
+# # List of Pokémon to fetch
+# pokemon_list=("pikachu" "bulbasaur" "charmander" "squirtle" "jigglypuff")
+
+# # Base API URL
+# base_url="https://pokeapi.co/api/v2/pokemon"
+
+# echo "Fetching Pokémon data in parallel..."
+
+# # Loop through Pokémon list
+# for pokemon in "${pokemon_list[@]}"; do
+#     {
+#         echo "Fetching $pokemon..."
+#         curl -s "$base_url/$pokemon" -o "${pokemon}.json"
+#         echo "$pokemon data saved to ${pokemon}.json"
+#     } &
+# done
+
+# # Display current jobs running in the background
+# jobs
+
+# # Wait for all background jobs to finish
+# wait
+
+# echo "✅ All Pokémon data fetched successfully!"
 #!/usr/bin/env bash
-# batchProcessing-0x04
-# Fetch Pokémon data in parallel and handle background jobs
+# batchProcessing-0x04.sh
+# A script to process files in batches, handle background processes,
+# and ensure cleanup before moving to the next step.
 
-# List of Pokémon to fetch
-pokemon_list=("pikachu" "bulbasaur" "charmander" "squirtle" "jigglypuff")
+set -euo pipefail
 
-# Base API URL
-base_url="https://pokeapi.co/api/v2/pokemon"
+# Simulated batch of files (replace with your actual files)
+FILES=("file1.txt" "file2.txt" "file3.txt" "file4.txt" "file5.txt")
 
-echo "Fetching Pokémon data in parallel..."
+# Function to process a single file
+process_file() {
+    local file="$1"
+    echo "Processing $file..."
+    sleep 2  # simulate long-running task
+    echo "Done with $file."
+}
 
-# Loop through Pokémon list
-for pokemon in "${pokemon_list[@]}"; do
-    {
-        echo "Fetching $pokemon..."
-        curl -s "$base_url/$pokemon" -o "${pokemon}.json"
-        echo "$pokemon data saved to ${pokemon}.json"
-    } &
+# Run processes in batches of N at a time
+BATCH_SIZE=2
+PIDS=()
+
+echo "Starting batch processing..."
+
+for file in "${FILES[@]}"; do
+    process_file "$file" &
+    PIDS+=($!)
+
+    # If we reached batch size, wait for processes to finish
+    if (( ${#PIDS[@]} >= BATCH_SIZE )); then
+        echo "Waiting for batch to finish..."
+        wait "${PIDS[@]}"
+        PIDS=()
+    fi
 done
 
-# Display current jobs running in the background
-jobs
+# Wait for remaining background processes
+if (( ${#PIDS[@]} > 0 )); then
+    echo "Waiting for remaining processes..."
+    wait "${PIDS[@]}"
+fi
 
-# Wait for all background jobs to finish
-wait
+echo "All processes finished."
 
-echo "✅ All Pokémon data fetched successfully!"
+# Extra step: Ensure all background processes are killed before exit
+echo "Cleaning up..."
+for pid in $(jobs -p); do
+    echo "Killing process $pid..."
+    kill "$pid" 2>/dev/null || true
+done
+
+echo "Batch processing completed successfully."
