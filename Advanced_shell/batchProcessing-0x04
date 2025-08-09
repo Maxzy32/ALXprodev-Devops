@@ -1,41 +1,28 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# batchProcessing-0x04
+# Fetch Pokémon data in parallel and handle background jobs
 
-# Create directory if not exists
-mkdir -p pokemon_data
+# List of Pokémon to fetch
+pokemon_list=("pikachu" "bulbasaur" "charmander" "squirtle" "jigglypuff")
 
-# Pokémon list
-pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+# Base API URL
+base_url="https://pokeapi.co/api/v2/pokemon"
 
-# Function to fetch Pokémon data
-fetch_pokemon() {
-    local pokemon=$1
-    echo "Fetching data for $pokemon..."
+echo "Fetching Pokémon data in parallel..."
 
-    status_code=$(curl -s -o "pokemon_data/${pokemon}.json" -w "%{http_code}" "https://pokeapi.co/api/v2/pokemon/$pokemon")
-
-    if [ "$status_code" -eq 200 ]; then
-        echo "Saved data to pokemon_data/${pokemon}.json ✅"
-    else
-        echo "❌ Failed to fetch data for $pokemon (Status: $status_code)" >&2
-        rm -f "pokemon_data/${pokemon}.json"
-    fi
-}
-
-# Store PIDs
-pids=()
-
-# Launch fetches in parallel
+# Loop through Pokémon list
 for pokemon in "${pokemon_list[@]}"; do
-    fetch_pokemon "$pokemon" &
-    pids+=($!) # Save PID of background process
+    {
+        echo "Fetching $pokemon..."
+        curl -s "$base_url/$pokemon" -o "${pokemon}.json"
+        echo "$pokemon data saved to ${pokemon}.json"
+    } &
 done
 
-# Wait for all processes, with cleanup
-for pid in "${pids[@]}"; do
-    if ! wait "$pid"; then
-        echo "⚠️ Process $pid did not finish successfully. Killing..."
-        kill "$pid" 2>/dev/null
-    fi
-done
+# Display current jobs running in the background
+jobs
 
-echo "✅ All parallel fetches completed."
+# Wait for all background jobs to finish
+wait
+
+echo "✅ All Pokémon data fetched successfully!"
