@@ -1,7 +1,37 @@
+# #!/bin/bash
+
+# # Create directory if not exists
+# mkdir -p pokemon_data
+
+# # List of Pokémon
+# pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+
+# # Loop through each Pokémon
+# for pokemon in "${pokemon_list[@]}"; do
+#     echo "Fetching data for $pokemon..."
+#     # API request
+#     status_code=$(curl -s -o "pokemon_data/${pokemon}.json" -w "%{http_code}" "https://pokeapi.co/api/v2/pokemon/$pokemon")
+
+#     # Check if request was successful
+#     if [ "$status_code" -eq 200 ]; then
+#         echo "Saved data to pokemon_data/${pokemon}.json ✅"
+#     else
+#         echo "❌ Failed to fetch data for $pokemon (Status: $status_code)" >&2
+#         rm -f "pokemon_data/${pokemon}.json"
+#     fi
+
+#     # Delay to prevent rate limiting
+#     sleep 2
+# done
+
 #!/bin/bash
 
-# Create directory if not exists
+# Create directory for Pokémon data if not exists
 mkdir -p pokemon_data
+
+# Error log file
+ERROR_LOG="errors.txt"
+> "$ERROR_LOG"  # Clear old logs
 
 # List of Pokémon
 pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
@@ -9,17 +39,29 @@ pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 # Loop through each Pokémon
 for pokemon in "${pokemon_list[@]}"; do
     echo "Fetching data for $pokemon..."
-    # API request
-    status_code=$(curl -s -o "pokemon_data/${pokemon}.json" -w "%{http_code}" "https://pokeapi.co/api/v2/pokemon/$pokemon")
 
-    # Check if request was successful
-    if [ "$status_code" -eq 200 ]; then
-        echo "Saved data to pokemon_data/${pokemon}.json ✅"
-    else
-        echo "❌ Failed to fetch data for $pokemon (Status: $status_code)" >&2
-        rm -f "pokemon_data/${pokemon}.json"
+    retries=0
+    success=false
+
+    while [ $retries -lt 3 ]; do
+        status_code=$(curl -s -o "pokemon_data/${pokemon}.json" -w "%{http_code}" "https://pokeapi.co/api/v2/pokemon/$pokemon")
+
+        if [ "$status_code" -eq 200 ]; then
+            echo "Saved data to pokemon_data/${pokemon}.json ✅"
+            success=true
+            break
+        else
+            retries=$((retries+1))
+            echo "⚠️  Attempt $retries failed for $pokemon (Status: $status_code). Retrying..."
+            sleep 2
+        fi
+    done
+
+    if [ "$success" = false ]; then
+        echo "❌ Failed to fetch data for $pokemon after 3 attempts." | tee -a "$ERROR_LOG"
+        rm -f "pokemon_data/${pokemon}.json"  # Remove invalid file
     fi
 
-    # Delay to prevent rate limiting
+    # Delay between different Pokémon to avoid rate limits
     sleep 2
 done
