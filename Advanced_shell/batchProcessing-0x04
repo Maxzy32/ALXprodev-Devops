@@ -21,12 +21,21 @@ fetch_pokemon() {
     fi
 }
 
-# Loop through Pokémon and fetch in parallel
+# Store PIDs
+pids=()
+
+# Launch fetches in parallel
 for pokemon in "${pokemon_list[@]}"; do
     fetch_pokemon "$pokemon" &
+    pids+=($!) # Save PID of background process
 done
 
-# Wait for all parallel jobs to finish
-wait
+# Wait for all processes, with cleanup
+for pid in "${pids[@]}"; do
+    if ! wait "$pid"; then
+        echo "⚠️ Process $pid did not finish successfully. Killing..."
+        kill "$pid" 2>/dev/null
+    fi
+done
 
 echo "✅ All parallel fetches completed."
